@@ -1,0 +1,7 @@
+#Sun May 10 21:48:22 IST 2026
+base.0=E\:\\Internship_Project\\.gradle-build-latest\\app\\intermediates\\dex\\debugAndroidTest\\mergeProjectDexDebugAndroidTest\\0\\classes.dex
+base.1=E\:\\Internship_Project\\.gradle-build-latest\\app\\intermediates\\dex\\debugAndroidTest\\mergeProjectDexDebugAndroidTest\\2\\classes.dex
+path.0=0/classes.dex
+path.1=2/classes.dex
+renamed.0=classes.dex
+renamed.1=classes2.dex

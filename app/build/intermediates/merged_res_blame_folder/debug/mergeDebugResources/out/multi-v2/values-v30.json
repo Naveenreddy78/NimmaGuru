@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.mindmatrix.nimmaguru.app-mergeDebugResources-43:/values-v30/values-v30.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\Naveen\\.gradle\\caches\\8.12\\transforms\\dc15676cffa2abafbdfba4d11c8ad869\\transformed\\material3-release\\res\\values-v30\\values-v30.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "72",
+                        "endOffsets": "123"
+                    }
+                }
+            ]
+        }
+    ]
+}

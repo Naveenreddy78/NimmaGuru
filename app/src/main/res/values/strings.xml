@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Nimma Guru</string>
+    <string name="tagline">Your Community Mentors</string>
+    <string name="who_are_you">Who are you?</string>
+    <string name="guru_role">I am a Guru</string>
+    <string name="student_role">I am a Student</string>
+    <string name="phone_hint">Mobile number</string>
+    <string name="send_otp">Send OTP</string>
+    <string name="privacy_note">Your phone number is protected and only shared when you choose WhatsApp contact.</string>
+    <string name="create_profile">Create Profile</string>
+    <string name="name">Name</string>
+    <string name="village">Village</string>
+    <string name="grade">Grade / Standard</string>
+    <string name="bio">Bio</string>
+    <string name="dashboard">Dashboard</string>
+    <string name="search_gurus">Search Gurus by skill or village</string>
+    <string name="wall_of_fame">Wall of Fame</string>
+    <string name="calendar">Calendar</string>
+    <string name="thank_you">Thank You Note</string>
+    <string name="post_note">Post Note</string>
+    <string name="whatsapp">Contact via WhatsApp</string>
+</resources>

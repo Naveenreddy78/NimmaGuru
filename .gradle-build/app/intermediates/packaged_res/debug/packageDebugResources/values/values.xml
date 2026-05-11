@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="nimma_background">#FFFFFF</color>
+    <color name="nimma_green">#2E7D32</color>
+    <color name="nimma_orange">#F57C00</color>
+    <string name="app_name">Nimma Guru</string>
+    <string name="bio">Bio</string>
+    <string name="calendar">Calendar</string>
+    <string name="create_profile">Create Profile</string>
+    <string name="dashboard">Dashboard</string>
+    <string name="grade">Grade / Standard</string>
+    <string name="guru_role">I am a Guru</string>
+    <string name="name">Name</string>
+    <string name="phone_hint">Mobile number</string>
+    <string name="post_note">Post Note</string>
+    <string name="privacy_note">Your phone number is protected and only shared when you choose WhatsApp contact.</string>
+    <string name="search_gurus">Search Gurus by skill or village</string>
+    <string name="send_otp">Send OTP</string>
+    <string name="student_role">I am a Student</string>
+    <string name="tagline">Your Community Mentors</string>
+    <string name="thank_you">Thank You Note</string>
+    <string name="village">Village</string>
+    <string name="wall_of_fame">Wall of Fame</string>
+    <string name="whatsapp">Contact via WhatsApp</string>
+    <string name="who_are_you">Who are you?</string>
+    <style name="Theme.NimmaGuru" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@color/nimma_background</item>
+        <item name="android:statusBarColor">@color/nimma_background</item>
+    </style>
+</resources>
