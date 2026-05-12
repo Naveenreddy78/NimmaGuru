@@ -20,11 +20,7 @@ This workspace now contains a Kotlin Android project for the Nimma Guru communit
 - Kannada and English string resources
 - Firebase dependencies and starter Firestore security rules
 
-## Open In Android Studio
 
-1. Open `D:\OneDrive\Desktop\Internship_Project` in Android Studio.
-2. Let Gradle sync the project.
-3. Run the `app` configuration on an emulator or Android device.
 
 ## Firebase Setup
 
