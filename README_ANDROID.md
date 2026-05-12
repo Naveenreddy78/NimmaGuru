@@ -33,9 +33,7 @@ The Gradle dependency setup includes Firebase Auth and Firestore. To connect a r
 5. In Firestore, create the database and publish or adapt `firestore.rules`.
 6. Sync Gradle and run the app.
 
-The Google Services Gradle plugin is applied automatically when `app/google-services.json` exists. Before that file is added, the app still builds and shows a clear Firebase configuration message on the auth screen.
 
-Usernames are stored in the `usernames/{username}` collection as lookup documents pointing to the Firebase Auth email account. Full profile data is stored in `users/{uid}`, and role-specific profile details are stored in `students/{uid}` or `gurus/{uid}`.
 
 ## Notes
 
