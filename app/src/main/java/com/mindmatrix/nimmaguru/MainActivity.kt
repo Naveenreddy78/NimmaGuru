@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,10 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -43,7 +39,6 @@ import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -57,7 +52,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Resolve security provider errors
         try {
             ProviderInstaller.installIfNeeded(this)
         } catch (e: Exception) {
@@ -73,10 +67,10 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class UserRole { Teacher, Student }
-private enum class AppScreen { SignIn, SignUp, Profile, Dashboard, GuruDetail, Thanks, Calendar, Fame, CreateSession }
-private enum class AppTab { Home, Calendar, Fame }
-private enum class SignInMethod { UsernamePassword, PhoneOtp }
+enum class UserRole { Teacher, Student }
+enum class AppScreen { SignIn, SignUp, Profile, Dashboard, GuruDetail, Thanks, Calendar, Fame, CreateSession }
+enum class AppTab { Home, Calendar, Fame }
+enum class SignInMethod { UsernamePassword, PhoneOtp }
 
 data class Guru(
     val id: String = "",
@@ -91,7 +85,7 @@ data class Guru(
     val showPhone: Boolean = false
 )
 
-private data class Student(
+data class Student(
     val id: String = "",
     val name: String = "",
     val village: String = "",
@@ -99,7 +93,7 @@ private data class Student(
     val interests: List<String> = emptyList()
 )
 
-private data class Session(
+data class Session(
     val id: String = "",
     val guruId: String = "",
     val guruName: String = "",
@@ -110,7 +104,7 @@ private data class Session(
     val status: String = ""
 )
 
-private data class Appreciation(
+data class Appreciation(
     val guruId: String = "",
     val studentName: String = "",
     val message: String = "",
@@ -118,7 +112,7 @@ private data class Appreciation(
     val timestamp: Timestamp? = null
 )
 
-private data class UserProfile(
+data class UserProfile(
     val uid: String = "",
     val username: String = "",
     val phone: String = "",
@@ -126,7 +120,7 @@ private data class UserProfile(
     val role: UserRole = UserRole.Student
 )
 
-private data class AppState(
+public data class AppState(
     val screen: AppScreen = AppScreen.SignIn,
     val signInMethod: SignInMethod = SignInMethod.UsernamePassword,
     val firebaseReady: Boolean = true,
@@ -154,7 +148,7 @@ private data class AppState(
     val appreciations: List<Appreciation> = emptyList()
 )
 
-private class NimmaGuruViewModel(firebaseReady: Boolean) : ViewModel() {
+ class NimmaGuruViewModel(firebaseReady: Boolean) : ViewModel() {
     private val auth: FirebaseAuth? = if (firebaseReady) FirebaseAuth.getInstance() else null
     private val db: FirebaseFirestore? = if (firebaseReady) FirebaseFirestore.getInstance() else null
     private val _state = MutableStateFlow(AppState(firebaseReady = firebaseReady))
@@ -186,7 +180,25 @@ private class NimmaGuruViewModel(firebaseReady: Boolean) : ViewModel() {
         db?.collection("gurus")?.addSnapshotListener { snapshot, e ->
             if (e != null) return@addSnapshotListener
             val list = snapshot?.documents?.mapNotNull { doc ->
-                doc.toObject(Guru::class.java)?.copy(id = doc.id)
+                try {
+                    val skillsRaw = doc.get("skills") as? List<*>
+                    val availabilityRaw = doc.get("availability") as? List<*>
+                    Guru(
+                        id = doc.id,
+                        name = doc.getString("name") ?: "",
+                        phone = doc.getString("phone") ?: "",
+                        skills = skillsRaw?.filterIsInstance<String>() ?: emptyList(),
+                        village = doc.getString("village") ?: "",
+                        street = doc.getString("street") ?: "",
+                        bio = doc.getString("bio") ?: "",
+                        availability = availabilityRaw?.filterIsInstance<String>() ?: emptyList(),
+                        appreciationCount = doc.getLong("appreciationCount")?.toInt() ?: 0,
+                        showPhone = doc.getBoolean("showPhone") ?: false
+                    )
+                } catch (ex: Exception) {
+                    Log.e("NimmaGuru", "Error mapping guru", ex)
+                    null
+                }
             } ?: emptyList()
             _state.update { it.copy(gurus = list) }
         }
@@ -215,9 +227,23 @@ private class NimmaGuruViewModel(firebaseReady: Boolean) : ViewModel() {
 
     private fun observeAppreciations() {
         db?.collection("appreciations")?.addSnapshotListener { snapshot, e ->
-            if (e != null) return@addSnapshotListener
+            if (e != null) {
+                Log.e("NimmaGuru", "Error observing appreciations", e)
+                return@addSnapshotListener
+            }
             val list = snapshot?.documents?.mapNotNull { doc ->
-                doc.toObject(Appreciation::class.java)
+                try {
+                    Appreciation(
+                        guruId = doc.getString("guruId") ?: "",
+                        studentName = doc.getString("studentName") ?: "",
+                        message = doc.getString("message") ?: "",
+                        rating = doc.getLong("rating")?.toInt() ?: 0,
+                        timestamp = doc.getTimestamp("timestamp")
+                    )
+                } catch (ex: Exception) {
+                    Log.e("NimmaGuru", "Error mapping appreciation", ex)
+                    null
+                }
             } ?: emptyList()
             val sorted = list.sortedByDescending { it.timestamp?.seconds ?: 0L }
             _state.update { it.copy(appreciations = sorted) }
@@ -373,14 +399,40 @@ private class NimmaGuruViewModel(firebaseReady: Boolean) : ViewModel() {
                 val profile = UserProfile(uid, "NG User", auth.currentUser?.phoneNumber.orEmpty(), auth.currentUser?.email.orEmpty(), UserRole.Student)
                 _state.update { it.copy(userProfile = profile, screen = AppScreen.Profile, isLoading = false) }
             } else {
-                val role = if (snapshot.getString("role") == "teacher") UserRole.Teacher else UserRole.Student
+                val roleStr = snapshot.getString("role") ?: "student"
+                val role = if (roleStr == "teacher") UserRole.Teacher else UserRole.Student
                 val profile = UserProfile(uid, snapshot.getString("username") ?: "", snapshot.getString("phone") ?: "", snapshot.getString("email") ?: "", role)
                 _state.update { it.copy(userProfile = profile, screen = AppScreen.Dashboard, isLoading = false) }
                 
                 db?.collection(if (role == UserRole.Teacher) "gurus" else "students")?.document(uid)?.addSnapshotListener { d, _ ->
-                    if (auth.currentUser != null) {
-                        if (role == UserRole.Teacher) _state.update { it.copy(currentGuru = d?.toObject(Guru::class.java)?.copy(id = uid)) }
-                        else _state.update { it.copy(currentStudent = d?.toObject(Student::class.java)?.copy(id = uid)) }
+                    if (auth.currentUser != null && d != null && d.exists()) {
+                        if (role == UserRole.Teacher) {
+                             val skillsRaw = d.get("skills") as? List<*>
+                             val availabilityRaw = d.get("availability") as? List<*>
+                             val guru = Guru(
+                                id = uid,
+                                name = d.getString("name") ?: "",
+                                phone = d.getString("phone") ?: "",
+                                skills = skillsRaw?.filterIsInstance<String>() ?: emptyList(),
+                                village = d.getString("village") ?: "",
+                                street = d.getString("street") ?: "",
+                                bio = d.getString("bio") ?: "",
+                                availability = availabilityRaw?.filterIsInstance<String>() ?: emptyList(),
+                                appreciationCount = d.getLong("appreciationCount")?.toInt() ?: 0,
+                                showPhone = d.getBoolean("showPhone") ?: false
+                             )
+                             _state.update { it.copy(currentGuru = guru) }
+                        } else {
+                            val interestsRaw = d.get("interests") as? List<*>
+                            val student = Student(
+                                id = uid,
+                                name = d.getString("name") ?: "",
+                                village = d.getString("village") ?: "",
+                                grade = d.getString("grade") ?: "",
+                                interests = interestsRaw?.filterIsInstance<String>() ?: emptyList()
+                            )
+                            _state.update { it.copy(currentStudent = student) }
+                        }
                     }
                 }
             }
@@ -394,13 +446,23 @@ private class NimmaGuruViewModel(firebaseReady: Boolean) : ViewModel() {
     private fun fail(error: Exception) = setMessage(error.localizedMessage ?: "Firebase error.")
     private fun usernameAuthEmail(username: String) = "${username.lowercase()}@nimmaguru.app"
 
-    private fun Guru.toFirestore() = mapOf("name" to name, "phone" to phone, "skills" to skills, "village" to village, "bio" to bio, "appreciationCount" to appreciationCount, "showPhone" to showPhone)
+    private fun Guru.toFirestore() = mapOf(
+        "name" to name, 
+        "phone" to phone, 
+        "skills" to skills, 
+        "village" to village, 
+        "street" to street,
+        "bio" to bio, 
+        "availability" to availability,
+        "appreciationCount" to appreciationCount, 
+        "showPhone" to showPhone
+    )
     private fun Student.toFirestore() = mapOf("name" to name, "village" to village, "grade" to grade, "interests" to interests)
     private fun UserProfile.toFirestore() = mapOf("uid" to uid, "username" to username, "phone" to phone, "email" to email, "role" to role.name.lowercase())
 }
 
 @Composable
-private fun NimmaGuruTheme(content: @Composable () -> Unit) {
+fun NimmaGuruTheme(content: @Composable () -> Unit) {
     val scheme = lightColorScheme(
         primary = Color(0xFF2E7D32),
         secondary = Color(0xFFF57C00),
@@ -415,7 +477,7 @@ private fun NimmaGuruTheme(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun NimmaGuruApp(activity: ComponentActivity, firebaseReady: Boolean) {
+fun NimmaGuruApp(activity: ComponentActivity, firebaseReady: Boolean) {
     val viewModel = remember { NimmaGuruViewModel(firebaseReady) }
     val state by viewModel.state.collectAsState()
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -434,7 +496,7 @@ private fun NimmaGuruApp(activity: ComponentActivity, firebaseReady: Boolean) {
 }
 
 @Composable
-private fun SignInScreen(s: AppState, onU: (String) -> Unit, onP: (String) -> Unit, onSI: () -> Unit, onSU: () -> Unit) {
+fun SignInScreen(s: AppState, onU: (String) -> Unit, onP: (String) -> Unit, onSI: () -> Unit, onSU: () -> Unit) {
     Column(Modifier
         .fillMaxSize()
         .padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -456,7 +518,7 @@ private fun SignInScreen(s: AppState, onU: (String) -> Unit, onP: (String) -> Un
 }
 
 @Composable
-private fun SignUpScreen(s: AppState, onU: (String) -> Unit, onP: (String) -> Unit, onPh: (String) -> Unit, onR: (UserRole) -> Unit, onSO: () -> Unit, onVO: (String) -> Unit, onSI: () -> Unit) {
+fun SignUpScreen(s: AppState, onU: (String) -> Unit, onP: (String) -> Unit, onPh: (String) -> Unit, onR: (UserRole) -> Unit, onSO: () -> Unit, onVO: (String) -> Unit, onSI: () -> Unit) {
     var otp by remember { mutableStateOf("") }
     LazyColumn(Modifier
         .fillMaxSize()
@@ -490,7 +552,7 @@ private fun SignUpScreen(s: AppState, onU: (String) -> Unit, onP: (String) -> Un
 }
 
 @Composable
-private fun RoleDropdown(role: UserRole, onR: (UserRole) -> Unit) {
+fun RoleDropdown(role: UserRole, onR: (UserRole) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box(Modifier
         .fillMaxWidth()
@@ -505,7 +567,7 @@ private fun RoleDropdown(role: UserRole, onR: (UserRole) -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun ProfileScreen(role: UserRole, onSave: (String, String, String, List<String>, Boolean) -> Unit) {
+fun ProfileScreen(role: UserRole, onSave: (String, String, String, List<String>, Boolean) -> Unit) {
     var n by remember { mutableStateOf("") }; var v by remember { mutableStateOf("") }; var d by remember { mutableStateOf("") }; var sp by remember { mutableStateOf(false) }; var sel by remember { mutableStateOf(setOf<String>()) }
     val skills = listOf("Mathematics", "Science", "Kannada", "English", "Carpentry", "Farming", "Health")
     Scaffold(topBar = { TopBar("Create Your Profile") }) { padding ->
@@ -528,7 +590,7 @@ private fun ProfileScreen(role: UserRole, onSave: (String, String, String, List<
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DashboardScreen(state: AppState, viewModel: NimmaGuruViewModel) {
+fun DashboardScreen(state: AppState, viewModel: NimmaGuruViewModel) {
     Scaffold(
         topBar = { TopBar("Dashboard", actions = { TextButton(viewModel::signOut) { Text("Sign out") } }) },
         bottomBar = { BottomNav(state.selectedTab, viewModel::openTab) }
@@ -538,11 +600,11 @@ private fun DashboardScreen(state: AppState, viewModel: NimmaGuruViewModel) {
 }
 
 @Composable
-private fun GuruDashboard(state: AppState, viewModel: NimmaGuruViewModel) {
+fun GuruDashboard(state: AppState, viewModel: NimmaGuruViewModel) {
     val g = state.currentGuru
-    LazyColumn(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    LazyColumn(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Text("Welcome, ${g?.name ?: "Guru"}", fontSize = 26.sp, fontWeight = FontWeight.Bold); Text("Your community impact at a glance", color = Color(0xFF5A665A)) }
-        item { Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { StatCard("Appreciations", "${g?.appreciationCount ?: 0}", Modifier.weight(1f)); StatCard("Sessions", "${state.sessions.count { it.guruId == g?.id }}", Modifier.weight(1f)); StatCard("Students", "12", Modifier.weight(1f)) } }
+        item { Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) { StatCard("Appreciations", "${g?.appreciationCount ?: 0}", Modifier.weight(1f)); StatCard("Sessions", "${state.sessions.count { it.guruId == g?.id }}", Modifier.weight(1f)); StatCard("Students", "12", Modifier.weight(1f)) } }
         item { Button(viewModel::openCreateSession, Modifier.fillMaxWidth()) { Text("Create New Class Session") } }
         item { Text("Appreciation Wall", fontSize = 18.sp, fontWeight = FontWeight.SemiBold) }
         items(state.appreciations.filter { it.guruId == g?.id }) { AppreciationCard(it) }
@@ -550,7 +612,7 @@ private fun GuruDashboard(state: AppState, viewModel: NimmaGuruViewModel) {
 }
 
 @Composable
-private fun StudentDashboard(state: AppState, viewModel: NimmaGuruViewModel) {
+fun StudentDashboard(state: AppState, viewModel: NimmaGuruViewModel) {
     val filtered = state.gurus.filter { (it.name.contains(state.query, true) || it.village.contains(state.query, true)) && (state.skillFilter == null || state.skillFilter in it.skills) }
     LazyColumn(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { Text("Find a Guru", fontSize = 26.sp, fontWeight = FontWeight.Bold); OutlinedTextField(state.query, viewModel::updateQuery, label = { Text("Search gurus") }, modifier = Modifier.fillMaxWidth()) }
@@ -564,7 +626,7 @@ private fun StudentDashboard(state: AppState, viewModel: NimmaGuruViewModel) {
 }
 
 @Composable
-private fun GuruDetailScreen(state: AppState, viewModel: NimmaGuruViewModel) {
+fun GuruDetailScreen(state: AppState, viewModel: NimmaGuruViewModel) {
     val context = LocalContext.current; val g = state.gurus.find { it.id == state.selectedGuruId } ?: return
     Scaffold(topBar = { TopBar(g.name, viewModel::backToDashboard) }) { p ->
         LazyColumn(Modifier
@@ -572,7 +634,7 @@ private fun GuruDetailScreen(state: AppState, viewModel: NimmaGuruViewModel) {
             .padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item { Row(verticalAlignment = Alignment.CenterVertically) { Avatar(g.name, 76); Spacer(Modifier.width(14.dp)); Column { Text(g.name, fontSize = 26.sp, fontWeight = FontWeight.Bold); Text("${g.village} • ${g.appreciationCount} appreciations", color = Color(0xFF5A665A)) } } }
             item { Text(g.bio, fontSize = 16.sp) }
-            item { Button({ val url = "https://wa.me/91${g.phone}?text=Namaste%20${Uri.encode(g.name)}"; context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }, Modifier.fillMaxWidth()) { Text("WhatsApp") } }
+            item { Button({ val url = "https://wa.me/91${g.phone}?text=Namaste%20${Uri.encode(g.name)} Sir/Madam,\nI found your profile on the NimmaGuru App, and I would like to join your session. Kindly confirm the available slot."; context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }, Modifier.fillMaxWidth()) { Text("WhatsApp") } }
             item { OutlinedButton(viewModel::openThanks, Modifier.fillMaxWidth()) { Text("Post Thank You Note") } }
             item { Text("Appreciation Wall", fontSize = 18.sp, fontWeight = FontWeight.SemiBold) }
             items(state.appreciations.filter { it.guruId == g.id }) { AppreciationCard(it) }
@@ -581,7 +643,7 @@ private fun GuruDetailScreen(state: AppState, viewModel: NimmaGuruViewModel) {
 }
 
 @Composable
-private fun ThanksScreen(onPost: (String, Int) -> Unit, onCancel: () -> Unit) {
+fun ThanksScreen(onPost: (String, Int) -> Unit, onCancel: () -> Unit) {
     var msg by remember { mutableStateOf("") }
     Scaffold(topBar = { TopBar("Say Thanks", onCancel) }) { p ->
         Column(Modifier
@@ -594,7 +656,7 @@ private fun ThanksScreen(onPost: (String, Int) -> Unit, onCancel: () -> Unit) {
 }
 
 @Composable
-private fun CreateSessionScreen(state: AppState, onCreate: (String, LocalDate, String, String) -> Unit, onCancel: () -> Unit) {
+fun CreateSessionScreen(state: AppState, onCreate: (String, LocalDate, String, String) -> Unit, onCancel: () -> Unit) {
     var s by remember { mutableStateOf("") }; var t by remember { mutableStateOf("") }; var l by remember { mutableStateOf("") }; var dStr by remember { mutableStateOf(LocalDate.now().toString()) }
     val guru = state.currentGuru ?: return
     Scaffold(topBar = { TopBar("New Session", onCancel) }) { padding ->
@@ -612,7 +674,7 @@ private fun CreateSessionScreen(state: AppState, onCreate: (String, LocalDate, S
 }
 
 @Composable
-private fun CalendarScreen(state: AppState, onTab: (AppTab) -> Unit, onCreate: () -> Unit) {
+fun CalendarScreen(state: AppState, onTab: (AppTab) -> Unit, onCreate: () -> Unit) {
     Scaffold(topBar = { TopBar("Calendar") }, bottomBar = { BottomNav(state.selectedTab, onTab) }, floatingActionButton = { if (state.userProfile?.role == UserRole.Teacher) FloatingActionButton(onCreate, containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White) { Text("+", fontSize = 24.sp) } }) { p ->
         LazyColumn(Modifier
             .padding(p)
@@ -631,7 +693,7 @@ private fun CalendarScreen(state: AppState, onTab: (AppTab) -> Unit, onCreate: (
 }
 
 @Composable
-private fun FameScreen(state: AppState, onTab: (AppTab) -> Unit) {
+fun FameScreen(state: AppState, onTab: (AppTab) -> Unit) {
     Scaffold(topBar = { TopBar("Wall of Fame") }, bottomBar = { BottomNav(state.selectedTab, onTab) }) { p ->
         LazyColumn(Modifier
             .padding(p)
@@ -644,12 +706,12 @@ private fun FameScreen(state: AppState, onTab: (AppTab) -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TopBar(title: String, onBack: (() -> Unit)? = null, actions: @Composable () -> Unit = {}) {
+fun TopBar(title: String, onBack: (() -> Unit)? = null, actions: @Composable () -> Unit = {}) {
     TopAppBar(title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) }, navigationIcon = { if (onBack != null) TextButton(onBack) { Text("Back") } }, actions = { actions() }, colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White))
 }
 
 @Composable
-private fun BottomNav(sel: AppTab, onTab: (AppTab) -> Unit) {
+fun BottomNav(sel: AppTab, onTab: (AppTab) -> Unit) {
     NavigationBar(containerColor = Color.White) {
         NavigationBarItem(sel == AppTab.Home, { onTab(AppTab.Home) }, { Text("H") }, label = { Text("Home") })
         NavigationBarItem(sel == AppTab.Calendar, { onTab(AppTab.Calendar) }, { Text("C") }, label = { Text("Calendar") })
@@ -658,7 +720,7 @@ private fun BottomNav(sel: AppTab, onTab: (AppTab) -> Unit) {
 }
 
 @Composable
-private fun StatCard(label: String, value: String, modifier: Modifier) {
+fun StatCard(label: String, value: String, modifier: Modifier) {
     Card(modifier, colors = CardDefaults.cardColors(containerColor = Color(0xFFF4FBF4)), shape = RoundedCornerShape(8.dp)) {
         Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
@@ -668,7 +730,7 @@ private fun StatCard(label: String, value: String, modifier: Modifier) {
 }
 
 @Composable
-private fun GuruListCard(g: Guru, onClick: () -> Unit) {
+fun GuruListCard(g: Guru, onClick: () -> Unit) {
     Card(Modifier
         .fillMaxWidth()
         .clickable { onClick() }
@@ -681,7 +743,7 @@ private fun GuruListCard(g: Guru, onClick: () -> Unit) {
 }
 
 @Composable
-private fun AppreciationCard(a: Appreciation) {
+fun AppreciationCard(a: Appreciation) {
     Card(Modifier
         .fillMaxWidth()
         .padding(vertical = 4.dp), colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, Color(0xFFE7F1E7))) {
@@ -690,7 +752,7 @@ private fun AppreciationCard(a: Appreciation) {
 }
 
 @Composable
-private fun Avatar(name: String, size: Int) {
+fun Avatar(name: String, size: Int) {
     Box(Modifier
         .size(size.dp)
         .clip(CircleShape)
@@ -698,7 +760,7 @@ private fun Avatar(name: String, size: Int) {
 }
 
 @Composable
-private fun AppMark() {
+fun AppMark() {
     Box(Modifier
         .size(104.dp)
         .clip(CircleShape)

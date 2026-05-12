@@ -1,4 +1,0 @@
-com.mindmatrix.nimmaguru.test.app-androidTest-0 E:\Internship_Project\.gradle-build-latest\app\generated\res\resValues\androidTest\debug
-com.mindmatrix.nimmaguru.test.app-mergeDebugAndroidTestResources-1 E:\Internship_Project\.gradle-build-latest\app\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\merged.dir
-com.mindmatrix.nimmaguru.test.app-mergeDebugAndroidTestResources-2 E:\Internship_Project\.gradle-build-latest\app\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\stripped.dir
-com.mindmatrix.nimmaguru.test.app-debugAndroidTest-3 E:\Internship_Project\.gradle-build-latest\app\intermediates\merged_res\debugAndroidTest\mergeDebugAndroidTestResources
