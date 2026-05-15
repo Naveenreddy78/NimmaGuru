@@ -1,8 +1,8 @@
 # Project exclude paths
 /.gradle/
 /build/
-/app/google-services.json
+app/google-services.json
 *.apk
 .gradle-build-latest
 .idea/
-*oogle-services.json
+google-services.json
