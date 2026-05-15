@@ -5,4 +5,4 @@
 *.apk
 .gradle-build-latest
 .idea/
-google-services.json
+*oogle-services.json
